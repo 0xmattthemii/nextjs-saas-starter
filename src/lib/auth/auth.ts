@@ -52,7 +52,12 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 30,   // 30 days
     updateAge: 60 * 60 * 24,         // refresh once a day
-    cookieCache: { enabled: true, maxAge: 60 * 5 },
+    // cookieCache is intentionally OFF: the session row carries
+    // `activeOrganizationId`, which we mutate from Server Components (e.g. the
+    // dashboard auto-setup flow). With cookieCache on, those mutations don't
+    // propagate to the request cookie until the next sign-in — leading to a
+    // redirect loop on first sign-in. Re-enable only if you're willing to
+    // explicitly refresh the cookie after every active-org change.
   },
 
   plugins: [
