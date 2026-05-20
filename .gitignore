@@ -1,0 +1,53 @@
+# dependencies
+/node_modules
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (do not commit secrets)
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode/*
+!.vscode/launch.json
+!.vscode/settings.json
+.idea
+
+# Claude local settings (per-user; do not commit)
+.claude/settings.local.json
+
+# Agent-shim files are committed (they're generated, but we want zero-setup
+# for buyers cloning the repo). If you'd rather treat them as build artifacts,
+# uncomment below and add a `prepare` hook that runs `agents:sync`.
+# CLAUDE.md
+# .cursorrules
+# .github/copilot-instructions.md
