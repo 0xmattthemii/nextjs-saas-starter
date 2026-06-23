@@ -4,9 +4,8 @@ import { db } from '@/db'
 import { invitation, member, organization, user } from '@/db/schema'
 import { requireActiveOrg } from '@/lib/auth/session'
 import { OrgGeneralForm } from '@/components/settings/org-general-form'
-import { MembersList } from '@/components/settings/members-list'
+import { MembersTable, type MemberRow } from '@/components/settings/members-table'
 import { InviteForm } from '@/components/settings/invite-form'
-import { CreateOrgForm } from '@/components/settings/create-org-form'
 import {
   Card,
   CardContent,
@@ -18,16 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = { title: 'Organization settings' }
 
-// Each card's chrome (title + description) renders immediately. The two
-// data-backed cards stream independently — the members list never blocks the
-// general form, and vice versa.
-export default async function OrganizationSettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ new?: string }>
-}) {
-  const { new: showNew } = await searchParams
-
+// Static shell; the two data-backed cards stream independently via <Suspense>.
+export default function OrganizationSettingsPage() {
   return (
     <div className="space-y-6">
       <Card>
@@ -43,23 +34,11 @@ export default async function OrganizationSettingsPage({
       <Card>
         <CardHeader>
           <CardTitle>Members</CardTitle>
-          <CardDescription>People with access to this workspace.</CardDescription>
+          <CardDescription>People with access to this workspace, and pending invites.</CardDescription>
         </CardHeader>
         <Suspense fallback={<MembersSkeleton />}>
           <MembersSection />
         </Suspense>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Create a new workspace</CardTitle>
-          <CardDescription>
-            Start a separate environment with its own data and members.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CreateOrgForm defaultOpen={showNew === '1'} />
-        </CardContent>
       </Card>
     </div>
   )
@@ -126,54 +105,48 @@ async function MembersSection() {
   const invitations = await db
     .select()
     .from(invitation)
-    .where(eq(invitation.organizationId, orgId))
+    .where(and(eq(invitation.organizationId, orgId), eq(invitation.status, 'pending')))
 
   const currentRole = members.find((m) => m.userId === session.user.id)?.role ?? 'member'
   const canManage = currentRole === 'owner' || currentRole === 'admin'
 
+  const rows: MemberRow[] = [
+    ...members.map((m) => ({
+      type: 'member' as const,
+      id: m.id,
+      userId: m.userId,
+      name: m.name,
+      email: m.email,
+      image: m.image,
+      role: m.role,
+    })),
+    ...invitations.map((inv) => ({
+      type: 'invite' as const,
+      id: inv.id,
+      email: inv.email,
+      role: inv.role ?? 'member',
+    })),
+  ]
+
   return (
-    <CardContent className="space-y-6">
-      <MembersList
-        members={members.map((m) => ({
-          id: m.id,
-          userId: m.userId,
-          name: m.name,
-          email: m.email,
-          image: m.image,
-          role: m.role,
-        }))}
-        currentUserId={session.user.id}
-        canManage={canManage}
-      />
-      {invitations.length > 0 ? (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">Pending invitations</h3>
-          <ul className="space-y-1 text-sm text-muted-foreground">
-            {invitations.map((inv) => (
-              <li key={inv.id}>
-                {inv.email} — {inv.role ?? 'member'} ({inv.status})
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+    <CardContent className="space-y-4">
+      <MembersTable rows={rows} currentUserId={session.user.id} canManage={canManage} />
       {canManage ? <InviteForm /> : null}
     </CardContent>
   )
 }
 
-// Mirrors the member rows: avatar circle + name/email lines + a role pill.
 function MembersSkeleton() {
   return (
     <CardContent>
-      <div className="divide-y rounded-md border">
+      <div className="rounded-md border">
+        <div className="border-b px-3 py-2">
+          <Skeleton className="h-4 w-24" />
+        </div>
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-2">
-            <Skeleton className="size-8 rounded-full" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-40" />
-            </div>
+          <div key={i} className="flex items-center gap-3 border-b px-3 py-2 last:border-0">
+            <Skeleton className="size-7 rounded-full" />
+            <Skeleton className="h-4 max-w-48 flex-1" />
             <Skeleton className="h-5 w-16 rounded-full" />
           </div>
         ))}

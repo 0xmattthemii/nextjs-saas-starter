@@ -57,7 +57,7 @@ export function InviteForm() {
             id="invite-role"
             name="role"
             defaultValue="member"
-            className="h-9 w-full rounded-md border bg-background px-3 text-sm shadow-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+            className="h-9 w-full rounded-md border bg-background px-3 text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           >
             <option value="member">Member</option>
             <option value="admin">Admin</option>

@@ -50,8 +50,8 @@ function ExampleCard({
   description: string
 }) {
   return (
-    <Link href={href} className="group block">
-      <Card className="transition-colors group-hover:border-foreground/20">
+    <Link href={href} className="group block h-full">
+      <Card className="h-full transition-colors group-hover:border-foreground/20">
         <CardHeader>
           <Icon className="h-5 w-5 text-muted-foreground" />
           <CardTitle className="flex items-center justify-between text-base">
@@ -60,7 +60,6 @@ function ExampleCard({
           </CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
-        <CardContent />
       </Card>
     </Link>
   )

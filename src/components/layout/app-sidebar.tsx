@@ -43,7 +43,7 @@ export function AppSidebar({
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
         <OrgSwitcher orgs={orgs} activeOrgId={activeOrgId} />
       </SidebarHeader>

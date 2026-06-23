@@ -69,7 +69,7 @@ export function ItemForm({
           id="status"
           name="status"
           defaultValue={defaultValues?.status ?? 'active'}
-          className="h-9 w-40 rounded-md border bg-background px-3 text-sm shadow-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+          className="h-9 w-40 rounded-md border bg-background px-3 text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
         >
           <option value="active">Active</option>
           <option value="archived">Archived</option>

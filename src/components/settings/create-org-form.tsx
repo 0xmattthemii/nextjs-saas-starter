@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/auth-client'
@@ -19,9 +20,8 @@ const schema = z.object({
     .regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and dashes only'),
 })
 
-export function CreateOrgForm({ defaultOpen = false }: { defaultOpen?: boolean }) {
+export function CreateOrgForm() {
   const router = useRouter()
-  const [open, setOpen] = useState(defaultOpen)
   const [pending, startTransition] = useTransition()
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -46,25 +46,17 @@ export function CreateOrgForm({ defaultOpen = false }: { defaultOpen?: boolean }
         await authClient.organization.setActive({ organizationId: data.id })
       }
       toast.success('Workspace created')
-      setOpen(false)
+      // Land in the new workspace.
       router.push('/')
       router.refresh()
     })
-  }
-
-  if (!open) {
-    return (
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        Create new workspace
-      </Button>
-    )
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
         <Label htmlFor="new-org-name">Name</Label>
-        <Input id="new-org-name" name="name" placeholder="Acme team" />
+        <Input id="new-org-name" name="name" placeholder="Acme team" autoFocus />
         {errors.name ? <p className="text-xs text-destructive">{errors.name}</p> : null}
       </div>
       <div className="space-y-1.5">
@@ -76,8 +68,8 @@ export function CreateOrgForm({ defaultOpen = false }: { defaultOpen?: boolean }
         <Button type="submit" loading={pending}>
           Create workspace
         </Button>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-          Cancel
+        <Button type="button" variant="ghost" asChild>
+          <Link href="/">Cancel</Link>
         </Button>
       </div>
     </form>
