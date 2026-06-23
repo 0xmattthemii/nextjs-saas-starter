@@ -45,7 +45,7 @@ export function InviteForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 border-t pt-4" noValidate>
+    <form onSubmit={onSubmit} className="space-y-3" noValidate>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="invite-email">Invite by email</Label>
@@ -57,7 +57,7 @@ export function InviteForm() {
             id="invite-role"
             name="role"
             defaultValue="member"
-            className="h-9 w-full rounded-md border bg-background px-3 text-sm shadow-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+            className="h-9 w-full rounded-md border bg-background px-3 text-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           >
             <option value="member">Member</option>
             <option value="admin">Admin</option>
@@ -69,7 +69,7 @@ export function InviteForm() {
       </div>
       {errors.email ? <p className="text-xs text-destructive">{errors.email}</p> : null}
       <p className="text-xs text-muted-foreground">
-        Invitations are stored in the database. Wire up an email provider in <code>src/lib/auth/auth.ts</code> to actually deliver them.
+        Invitations are emailed via Resend when <code>RESEND_API_KEY</code> is set; otherwise the invite link is logged to the server console in dev.
       </p>
     </form>
   )

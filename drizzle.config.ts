@@ -12,6 +12,10 @@ export default defineConfig({
   dialect: 'postgresql',
   schema: './src/db/schema',
   out: './drizzle',
+  // Timestamped migration filenames (e.g. 20240115120000_name.sql) so parallel
+  // branches don't both grab a sequential number. Order is still tracked in
+  // drizzle/meta/_journal.json.
+  migrations: { prefix: 'timestamp' },
   dbCredentials: { url: process.env.DATABASE_URL },
   casing: 'snake_case',
   strict: true,

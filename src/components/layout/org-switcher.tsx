@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import { authClient } from '@/lib/auth/auth-client'
 import { cn } from '@/lib/utils'
@@ -87,12 +88,11 @@ export function OrgSwitcher({ orgs, activeOrgId }: { orgs: Org[]; activeOrgId: s
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => router.push('/settings/organization?new=1')}
-              className="gap-2"
-            >
-              <Plus className="size-4" />
-              New workspace
+            <DropdownMenuItem asChild className="gap-2">
+              <Link href="/organizations/new">
+                <Plus className="size-4" />
+                Create workspace
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
