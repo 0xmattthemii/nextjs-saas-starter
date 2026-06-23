@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -14,20 +15,26 @@ export function ItemForm({
   action,
   defaultValues,
   submitLabel,
+  successMessage = 'Saved',
 }: {
-  action: (formData: FormData) => Promise<void>
+  action: (formData: FormData) => Promise<{ id?: string } | void>
   defaultValues?: { name: string; description: string | null; status: Status }
   submitLabel: string
+  successMessage?: string
 }) {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       try {
-        await action(formData)
-        toast.success('Saved')
+        const result = await action(formData)
+        toast.success(successMessage)
+        // create() returns the new id → go to it; update() returns void → refresh.
+        if (result?.id) router.push(`/items/${result.id}`)
+        else router.refresh()
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Save failed')
+        toast.error(err instanceof Error ? err.message : 'Something went wrong')
       }
     })
   }
@@ -69,8 +76,8 @@ export function ItemForm({
         </select>
       </div>
       <div className="flex items-center gap-2">
-        <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : submitLabel}
+        <Button type="submit" loading={pending}>
+          {submitLabel}
         </Button>
         <Button type="button" variant="ghost" asChild>
           <Link href="/items">Cancel</Link>

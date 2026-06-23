@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 
 export function ItemRowActions({ deleteAction }: { deleteAction: () => Promise<void> }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
@@ -22,6 +24,9 @@ export function ItemRowActions({ deleteAction }: { deleteAction: () => Promise<v
     startTransition(async () => {
       try {
         await deleteAction()
+        toast.success('Item deleted')
+        router.push('/items')
+        router.refresh()
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Delete failed')
         setOpen(false)
@@ -45,8 +50,8 @@ export function ItemRowActions({ deleteAction }: { deleteAction: () => Promise<v
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={confirmDelete} disabled={pending}>
-            {pending ? 'Deleting…' : 'Delete'}
+          <Button variant="destructive" onClick={confirmDelete} loading={pending}>
+            Delete
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,8 +6,8 @@ A production-grade Next.js 16 starter for multi-tenant SaaS apps. Opinionated, l
 - **shadcn/ui** + **Tailwind CSS v4** with light/dark/system themes
 - **Better Auth** with email/password, Google OAuth, and the organization plugin (multi-tenant out of the box)
 - **Drizzle ORM** + **Postgres** — works with any provider via `DATABASE_URL`
-- **AI SDK 6** streaming chat via Vercel AI Gateway
-- Inset sidebar shell, three example pages, per-route loading skeletons
+- **AI SDK 6** streaming chat — direct provider package, no gateway or vendor lock-in
+- Inset sidebar shell, three example pages, granular streaming with React `<Suspense>`
 - Account & organization settings, member invites, workspace switcher
 - `AGENTS.md` tuned for AI-assisted development — synced to Claude Code, Cursor, and Copilot
 
@@ -27,14 +27,14 @@ cp .env.example .env.local
 # At minimum set BETTER_AUTH_SECRET; DATABASE_URL already matches docker-compose.
 echo "BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\"" >> .env.local
 
-# 4. Migrate
-bun run db:push        # dev-only sync from schema → db
+# 4. Create tables + a ready-to-use dev login
+bun run db:setup       # = db:migrate + db:seed (creates dev@acme.test / password)
 
 # 5. Run
 bun run dev
 ```
 
-Open `http://localhost:3000`, create an account, and you're in.
+Open `http://localhost:3000` and sign in with **`dev@acme.test`** / **`password`** — or create your own account. (The dev user is seeded only against your local DB; re-run `bun run db:seed` anytime, e.g. after wiping the database.)
 
 ---
 
@@ -46,7 +46,7 @@ Open `http://localhost:3000`, create an account, and you're in.
 | `BETTER_AUTH_SECRET`                           | ✓                 | `openssl rand -base64 32`                               |
 | `BETTER_AUTH_URL`                              | prod              | Public origin (auto-inferred in dev)                    |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`    | optional          | Enables Google sign-in button                           |
-| `AI_GATEWAY_API_KEY`                           | optional          | Enables the /chat example (Vercel AI Gateway)           |
+| `ANTHROPIC_API_KEY`                            | optional          | Enables the /chat example (swap provider in route.ts)   |
 
 OAuth redirect URI for Google: `https://YOUR_HOST/api/auth/callback/google`.
 
@@ -68,7 +68,7 @@ OAuth redirect URI for Google: `https://YOUR_HOST/api/auth/callback/google`.
 - **Server-first.** Reads happen in Server Components; mutations in Server Actions; route handlers only for streaming/webhooks.
 - **Multi-tenancy at the data layer.** Every tenant-owned row has `organizationId`; every query filters on it. The `requireActiveOrg()` helper gives you the id from the session — never trust user input for it.
 - **Provider-agnostic Postgres.** No Supabase / Neon / RDS lock-in. Swap providers by changing `DATABASE_URL`.
-- **Isolated loading states.** Each route ships its own `loading.tsx` so sibling navigation doesn't flash the wrong skeleton.
+- **Granular loading.** Each async section streams behind its own `<Suspense>` with a matching skeleton — the static shell shows instantly and no single slow query blocks the page.
 - **Typed routes.** Broken `<Link>` destinations fail at build time.
 
 ---
@@ -84,7 +84,10 @@ bun run typecheck    # tsc --noEmit
 bun run db:generate  # create migration from schema diff
 bun run db:migrate   # apply pending migrations
 bun run db:push      # sync schema without a migration (dev only)
+bun run db:seed      # create a dev login (dev@acme.test / password), idempotent
+bun run db:setup     # db:migrate + db:seed (first-run convenience)
 bun run db:studio    # Drizzle Studio UI
+bun run auth:generate # regenerate src/db/schema/auth.ts from auth config (after a config change / better-auth upgrade)
 ```
 
 ---
@@ -113,10 +116,10 @@ These are opinionated, app-specific choices; the starter stays unopinionated so 
 2. Import it on Vercel (`https://vercel.com/new`) — accept the defaults; Bun and Next.js 16 are detected automatically.
 3. Provision a Postgres database (Vercel Marketplace → Neon, Supabase, etc.). Vercel injects `DATABASE_URL` automatically.
 4. Add `BETTER_AUTH_SECRET` (generate with `openssl rand -base64 32`) and `BETTER_AUTH_URL` (your production origin) under Settings → Environment Variables.
-5. Optional: add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and `AI_GATEWAY_API_KEY`.
+5. Optional: add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and `ANTHROPIC_API_KEY` (or your chosen AI provider's key).
 6. Run `bun run db:push` once against the production DB (locally, with `DATABASE_URL` pointed at production) — or wire `db:migrate` into your CI.
 
-The Vercel AI Gateway is the recommended way to power the `/chat` example in production — one key, any provider, with automatic failover and cost tracking.
+The `/chat` example talks to your AI provider directly (Anthropic by default) — no gateway required. Swap providers by installing another `@ai-sdk/*` package and updating `src/app/api/chat/route.ts`.
 
 ---
 

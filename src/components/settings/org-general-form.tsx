@@ -1,11 +1,11 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/auth-client'
+import { fieldErrors } from '@/lib/form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,7 +18,6 @@ const schema = z.object({
     .max(40)
     .regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and dashes only'),
 })
-type FormValues = z.infer<typeof schema>
 
 export function OrgGeneralForm({
   org,
@@ -28,43 +27,46 @@ export function OrgGeneralForm({
   canManage: boolean
 }) {
   const router = useRouter()
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: org.name, slug: org.slug },
-  })
+  const [pending, startTransition] = useTransition()
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  async function onSubmit(values: FormValues) {
-    const { error } = await authClient.organization.update({
-      organizationId: org.id,
-      data: { name: values.name, slug: values.slug },
-    })
-    if (error) {
-      toast.error(error.message ?? 'Could not update workspace')
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const parsed = schema.safeParse(Object.fromEntries(new FormData(e.currentTarget)))
+    if (!parsed.success) {
+      setErrors(fieldErrors(parsed.error))
       return
     }
-    toast.success('Workspace updated')
-    router.refresh()
+    setErrors({})
+    startTransition(async () => {
+      const { error } = await authClient.organization.update({
+        organizationId: org.id,
+        data: { name: parsed.data.name, slug: parsed.data.slug },
+      })
+      if (error) {
+        toast.error(error.message ?? 'Could not update workspace')
+        return
+      }
+      toast.success('Workspace updated')
+      router.refresh()
+    })
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
         <Label htmlFor="org-name">Name</Label>
-        <Input id="org-name" disabled={!canManage} {...register('name')} />
-        {errors.name ? <p className="text-xs text-destructive">{errors.name.message}</p> : null}
+        <Input id="org-name" name="name" defaultValue={org.name} disabled={!canManage} />
+        {errors.name ? <p className="text-xs text-destructive">{errors.name}</p> : null}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="org-slug">Slug</Label>
-        <Input id="org-slug" disabled={!canManage} {...register('slug')} />
-        {errors.slug ? <p className="text-xs text-destructive">{errors.slug.message}</p> : null}
+        <Input id="org-slug" name="slug" defaultValue={org.slug} disabled={!canManage} />
+        {errors.slug ? <p className="text-xs text-destructive">{errors.slug}</p> : null}
       </div>
       {canManage ? (
-        <Button type="submit" disabled={isSubmitting || !isDirty}>
-          {isSubmitting ? 'Saving…' : 'Save changes'}
+        <Button type="submit" loading={pending}>
+          Save changes
         </Button>
       ) : (
         <p className="text-xs text-muted-foreground">
