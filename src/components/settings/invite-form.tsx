@@ -45,7 +45,7 @@ export function InviteForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 border-t pt-4" noValidate>
+    <form onSubmit={onSubmit} className="space-y-3" noValidate>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="invite-email">Invite by email</Label>

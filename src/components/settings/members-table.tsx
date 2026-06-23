@@ -12,7 +12,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -45,6 +44,10 @@ function initialsOf(value: string) {
       .join('')
       .toUpperCase() || value.charAt(0).toUpperCase()
   )
+}
+
+function titleCase(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 export function MembersTable({
@@ -85,8 +88,7 @@ export function MembersTable({
         <TableHeader>
           <TableRow>
             <TableHead>Member</TableHead>
-            <TableHead className="w-28">Role</TableHead>
-            <TableHead className="w-24">Status</TableHead>
+            <TableHead className="w-32">Role</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -96,9 +98,18 @@ export function MembersTable({
             const isSelf = isMember && row.userId === currentUserId
             const isOwner = row.role === 'owner'
             const label = isMember ? row.name || row.email : row.email
-            const canManageMember = canManage && isMember && !isSelf && !isOwner
+            const roleEditable = canManage && isMember && !isSelf && !isOwner
+            const busy = busyId === row.id
+            const roleOptions = isOwner
+              ? [{ value: 'owner', label: 'Owner' }]
+              : isMember
+                ? [
+                    { value: 'admin', label: 'Admin' },
+                    { value: 'member', label: 'Member' },
+                  ]
+                : [{ value: row.role, label: titleCase(row.role) }]
+            const canRemove = canManage && isMember && !isSelf && !isOwner
             const canCancel = canManage && !isMember
-            const showMenu = canManageMember || canCancel
             return (
               <TableRow key={`${row.type}-${row.id}`}>
                 <TableCell>
@@ -108,9 +119,16 @@ export function MembersTable({
                       <AvatarFallback className="text-xs">{initialsOf(label)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">
-                        {label}
-                        {isSelf ? <span className="text-muted-foreground"> (you)</span> : null}
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium">
+                          {label}
+                          {isSelf ? <span className="text-muted-foreground"> (you)</span> : null}
+                        </span>
+                        {!isMember ? (
+                          <Badge variant="secondary" className="font-normal">
+                            Pending
+                          </Badge>
+                        ) : null}
                       </div>
                       {isMember && row.name ? (
                         <div className="truncate text-xs text-muted-foreground">{row.email}</div>
@@ -119,65 +137,57 @@ export function MembersTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={isOwner ? 'default' : 'secondary'} className="capitalize">
-                    {row.role}
-                  </Badge>
+                  <select
+                    aria-label="Role"
+                    value={row.role}
+                    disabled={!roleEditable || busy}
+                    onChange={(e) => {
+                      const next = e.target.value
+                      if (next === row.role) return
+                      act(
+                        row.id,
+                        () =>
+                          authClient.organization.updateMemberRole({
+                            memberId: row.id,
+                            role: next as 'admin' | 'member',
+                          }),
+                        'Role updated',
+                      )
+                    }}
+                    className="h-8 w-28 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {roleOptions.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
                 </TableCell>
                 <TableCell>
-                  {isMember ? (
-                    <span className="text-sm text-muted-foreground">Active</span>
-                  ) : (
-                    <Badge variant="outline">Pending</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {showMenu ? (
+                  {canRemove || canCancel ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          loading={busyId === row.id}
-                          aria-label="Member actions"
-                        >
-                          {busyId === row.id ? null : <MoreHorizontal className="size-4" />}
+                        <Button variant="ghost" size="icon-sm" loading={busy} aria-label="Member actions">
+                          {busy ? null : <MoreHorizontal className="size-4" />}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {canManageMember ? (
-                          <>
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                act(
-                                  row.id,
-                                  () =>
-                                    authClient.organization.updateMemberRole({
-                                      memberId: row.id,
-                                      role: row.role === 'member' ? 'admin' : 'member',
-                                    }),
-                                  'Role updated',
-                                )
-                              }
-                            >
-                              {row.role === 'member' ? 'Make admin' : 'Make member'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() =>
-                                act(
-                                  row.id,
-                                  () =>
-                                    authClient.organization.removeMember({
-                                      memberIdOrEmail: row.id,
-                                    }),
-                                  'Member removed',
-                                )
-                              }
-                            >
-                              Remove from workspace
-                            </DropdownMenuItem>
-                          </>
+                        {canRemove ? (
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              act(
+                                row.id,
+                                () =>
+                                  authClient.organization.removeMember({
+                                    memberIdOrEmail: row.id,
+                                  }),
+                                'Member removed',
+                              )
+                            }
+                          >
+                            Remove from workspace
+                          </DropdownMenuItem>
                         ) : null}
                         {canCancel ? (
                           <DropdownMenuItem
