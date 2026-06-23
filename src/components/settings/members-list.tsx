@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/auth-client'
@@ -28,16 +28,20 @@ export function MembersList({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   function removeMember(memberId: string) {
     if (!confirm('Remove this member from the workspace?')) return
+    setRemovingId(memberId)
     startTransition(async () => {
       const { error } = await authClient.organization.removeMember({ memberIdOrEmail: memberId })
       if (error) {
         toast.error(error.message ?? 'Could not remove member')
+        setRemovingId(null)
         return
       }
       toast.success('Member removed')
+      setRemovingId(null)
       router.refresh()
     })
   }
@@ -71,6 +75,7 @@ export function MembersList({
               <Button
                 size="sm"
                 variant="ghost"
+                loading={removingId === m.id}
                 disabled={pending}
                 onClick={() => removeMember(m.id)}
               >

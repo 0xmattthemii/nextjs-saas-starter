@@ -86,8 +86,8 @@ export function Chat() {
           className="min-h-[2.5rem] max-h-40 resize-none"
           disabled={busy}
         />
-        <Button type="submit" size="icon" disabled={busy || !input.trim()}>
-          <Send className="size-4" />
+        <Button type="submit" size="icon" loading={busy} disabled={!input.trim()}>
+          {busy ? null : <Send className="size-4" />}
         </Button>
       </form>
     </div>

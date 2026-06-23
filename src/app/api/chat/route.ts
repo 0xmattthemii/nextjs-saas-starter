@@ -1,17 +1,14 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
+import { anthropic } from '@ai-sdk/anthropic'
 import { requireSession } from '@/lib/auth/session'
 
 export const maxDuration = 30
 
-/**
- * AI SDK 6 streaming chat endpoint.
- *
- * Routes through Vercel AI Gateway by default (one key, any provider). Set
- * `AI_GATEWAY_API_KEY` in .env.local. To switch providers, install the
- * provider package (e.g. `@ai-sdk/openai`) and import it here instead of using
- * the string model reference.
- */
-const MODEL = 'anthropic/claude-sonnet-4.6'
+// Direct provider, no gateway — `@ai-sdk/anthropic` reads ANTHROPIC_API_KEY.
+// Swap providers by installing another package (e.g. `bun add @ai-sdk/openai`)
+// and changing the import + MODEL below; the `streamText` call is identical.
+// Verify model ids/APIs against node_modules/ai/docs before changing.
+const MODEL = anthropic('claude-sonnet-4-6')
 
 const SYSTEM_PROMPT =
   'You are a helpful assistant inside a SaaS starter app. Be concise, friendly, and honest about what you do not know.'

@@ -55,7 +55,7 @@ src/db/schema/items.ts         → items                                        
 
 - `useChat` (client) → POSTs UIMessages to `/api/chat`.
 - The route handler validates the session, converts to ModelMessages, calls `streamText`, and returns a UI message stream response.
-- The model string is routed through Vercel AI Gateway by default. One env var, any provider.
+- The model is a direct provider instance (`@ai-sdk/anthropic` by default, reading `ANTHROPIC_API_KEY`) — no gateway. Swap providers by changing the import + `MODEL` in the route.
 
 ## Theming
 

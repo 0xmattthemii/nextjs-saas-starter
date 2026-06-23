@@ -1,19 +1,16 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/auth-client'
+import { fieldErrors } from '@/lib/form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-const schema = z.object({
-  name: z.string().min(1, 'Name is required').max(80),
-})
-type FormValues = z.infer<typeof schema>
+const schema = z.object({ name: z.string().min(1, 'Name is required').max(80) })
 
 export function AccountForm({
   defaultValues,
@@ -21,31 +18,34 @@ export function AccountForm({
   defaultValues: { name: string; email: string }
 }) {
   const router = useRouter()
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: defaultValues.name },
-  })
+  const [pending, startTransition] = useTransition()
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  async function onSubmit(values: FormValues) {
-    const { error } = await authClient.updateUser({ name: values.name })
-    if (error) {
-      toast.error(error.message ?? 'Could not update your profile')
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const parsed = schema.safeParse(Object.fromEntries(new FormData(e.currentTarget)))
+    if (!parsed.success) {
+      setErrors(fieldErrors(parsed.error))
       return
     }
-    toast.success('Profile updated')
-    router.refresh()
+    setErrors({})
+    startTransition(async () => {
+      const { error } = await authClient.updateUser({ name: parsed.data.name })
+      if (error) {
+        toast.error(error.message ?? 'Could not update your profile')
+        return
+      }
+      toast.success('Profile updated')
+      router.refresh()
+    })
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
         <Label htmlFor="name">Display name</Label>
-        <Input id="name" {...register('name')} />
-        {errors.name ? <p className="text-xs text-destructive">{errors.name.message}</p> : null}
+        <Input id="name" name="name" defaultValue={defaultValues.name} />
+        {errors.name ? <p className="text-xs text-destructive">{errors.name}</p> : null}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
@@ -54,8 +54,8 @@ export function AccountForm({
           Email changes are not supported in this starter — wire up Better Auth&apos;s changeEmail flow when you need it.
         </p>
       </div>
-      <Button type="submit" disabled={isSubmitting || !isDirty}>
-        {isSubmitting ? 'Saving…' : 'Save changes'}
+      <Button type="submit" loading={pending}>
+        Save changes
       </Button>
     </form>
   )

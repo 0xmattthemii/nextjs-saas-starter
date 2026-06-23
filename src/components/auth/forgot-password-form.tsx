@@ -1,38 +1,42 @@
 'use client'
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useState, useTransition } from 'react'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/auth-client'
+import { fieldErrors } from '@/lib/form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const schema = z.object({ email: z.string().email('Enter a valid email') })
-type FormValues = z.infer<typeof schema>
 
 export function ForgotPasswordForm() {
+  const [pending, startTransition] = useTransition()
   const [done, setDone] = useState(false)
-  const [serverError, setServerError] = useState<string | null>(null)
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  async function onSubmit(values: FormValues) {
-    setServerError(null)
-    const { error } = await authClient.requestPasswordReset({
-      email: values.email,
-      redirectTo: '/reset-password',
-    })
-    if (error) {
-      setServerError(error.message ?? 'Could not send the reset link.')
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const parsed = schema.safeParse(Object.fromEntries(new FormData(e.currentTarget)))
+    if (!parsed.success) {
+      setErrors(fieldErrors(parsed.error))
       return
     }
-    // Always show success to avoid leaking whether an account exists.
-    setDone(true)
+    setErrors({})
+    startTransition(async () => {
+      const { error } = await authClient.requestPasswordReset({
+        email: parsed.data.email,
+        redirectTo: '/reset-password',
+      })
+      if (error) {
+        toast.error(error.message ?? 'Could not send the reset link.')
+        return
+      }
+      // Always show success to avoid leaking whether an account exists.
+      toast.success('If an account exists for that email, a reset link is on its way.')
+      setDone(true)
+    })
   }
 
   if (done) {
@@ -44,15 +48,14 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" autoComplete="email" {...register('email')} />
-        {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
+        <Input id="email" name="email" type="email" autoComplete="email" />
+        {errors.email ? <p className="text-xs text-destructive">{errors.email}</p> : null}
       </div>
-      {serverError ? <p className="text-sm text-destructive">{serverError}</p> : null}
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? 'Sending…' : 'Send reset link'}
+      <Button type="submit" className="w-full" loading={pending}>
+        Send reset link
       </Button>
     </form>
   )

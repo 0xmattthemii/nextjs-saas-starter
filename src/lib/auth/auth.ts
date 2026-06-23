@@ -4,7 +4,6 @@ import { nextCookies } from 'better-auth/next-js'
 import { organization } from 'better-auth/plugins'
 import { db } from '@/db'
 import * as authSchema from '@/db/schema/auth'
-import * as orgSchema from '@/db/schema/organization'
 
 if (!process.env.BETTER_AUTH_SECRET) {
   throw new Error('Missing BETTER_AUTH_SECRET. Generate one with: openssl rand -base64 32')
@@ -30,7 +29,7 @@ export const auth = betterAuth({
 
   database: drizzleAdapter(db, {
     provider: 'pg',
-    schema: { ...authSchema, ...orgSchema },
+    schema: authSchema,
   }),
 
   emailAndPassword: {

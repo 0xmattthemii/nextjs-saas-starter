@@ -1,6 +1,5 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { organization } from './organization'
-import { user } from './auth'
+import { organization, user } from './auth'
 
 /**
  * Example resource. Always scope tenant-owned rows by `organizationId` and

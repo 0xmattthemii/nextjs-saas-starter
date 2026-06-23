@@ -1,16 +1,16 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { items } from '@/db/schema'
 import { requireActiveOrg } from '@/lib/auth/session'
 import { itemInputSchema } from '@/lib/validators/items'
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+// Actions mutate + revalidate and RETURN — they don't redirect. The client
+// toasts the outcome and navigates, so success/error always surface in a toast.
 
-export async function createItem(formData: FormData): Promise<void> {
+export async function createItem(formData: FormData): Promise<{ id: string }> {
   const { session, orgId } = await requireActiveOrg()
   const parsed = itemInputSchema.safeParse({
     name: formData.get('name'),
@@ -31,7 +31,7 @@ export async function createItem(formData: FormData): Promise<void> {
     .returning({ id: items.id })
 
   revalidatePath('/items')
-  redirect(`/items/${created.id}`)
+  return { id: created.id }
 }
 
 export async function updateItem(id: string, formData: FormData): Promise<void> {
@@ -58,5 +58,4 @@ export async function deleteItem(id: string): Promise<void> {
   const { orgId } = await requireActiveOrg()
   await db.delete(items).where(and(eq(items.id, id), eq(items.organizationId, orgId)))
   revalidatePath('/items')
-  redirect('/items')
 }

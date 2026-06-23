@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/auth-client'
 import { Button } from '@/components/ui/button'
 
@@ -11,17 +12,22 @@ export function GoogleButton({ next }: { next?: string }) {
       type="button"
       variant="outline"
       className="w-full"
-      disabled={loading}
+      loading={loading}
       onClick={async () => {
         setLoading(true)
-        await authClient.signIn.social({
+        const { error } = await authClient.signIn.social({
           provider: 'google',
           callbackURL: next || '/',
         })
+        // On success the browser is redirected to Google; we only land here on error.
+        if (error) {
+          toast.error(error.message ?? 'Could not continue with Google')
+          setLoading(false)
+        }
       }}
     >
-      <GoogleIcon className="size-4" />
-      {loading ? 'Redirecting…' : 'Continue with Google'}
+      {loading ? null : <GoogleIcon className="size-4" />}
+      Continue with Google
     </Button>
   )
 }

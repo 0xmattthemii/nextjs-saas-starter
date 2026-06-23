@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/auth-client'
+import { fieldErrors } from '@/lib/form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,31 +16,35 @@ const schema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'At least 8 characters'),
 })
-type FormValues = z.infer<typeof schema>
 
 export function SignUpForm({ hasGoogle }: { hasGoogle: boolean }) {
   const router = useRouter()
-  const [serverError, setServerError] = useState<string | null>(null)
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const [pending, startTransition] = useTransition()
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  async function onSubmit(values: FormValues) {
-    setServerError(null)
-    const { error } = await authClient.signUp.email({
-      name: values.name,
-      email: values.email,
-      password: values.password,
-      callbackURL: '/',
-    })
-    if (error) {
-      setServerError(error.message ?? 'Could not create your account.')
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const parsed = schema.safeParse(Object.fromEntries(new FormData(e.currentTarget)))
+    if (!parsed.success) {
+      setErrors(fieldErrors(parsed.error))
       return
     }
-    router.push('/')
-    router.refresh()
+    setErrors({})
+    startTransition(async () => {
+      const { error } = await authClient.signUp.email({
+        name: parsed.data.name,
+        email: parsed.data.email,
+        password: parsed.data.password,
+        callbackURL: '/',
+      })
+      if (error) {
+        toast.error(error.message ?? 'Could not create your account.')
+        return
+      }
+      toast.success('Account created')
+      router.push('/')
+      router.refresh()
+    })
   }
 
   return (
@@ -59,27 +63,24 @@ export function SignUpForm({ hasGoogle }: { hasGoogle: boolean }) {
         </>
       ) : null}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="space-y-1.5">
           <Label htmlFor="name">Name</Label>
-          <Input id="name" autoComplete="name" {...register('name')} />
-          {errors.name ? <p className="text-xs text-destructive">{errors.name.message}</p> : null}
+          <Input id="name" name="name" autoComplete="name" />
+          {errors.name ? <p className="text-xs text-destructive">{errors.name}</p> : null}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" autoComplete="email" {...register('email')} />
-          {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
+          <Input id="email" name="email" type="email" autoComplete="email" />
+          {errors.email ? <p className="text-xs text-destructive">{errors.email}</p> : null}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
-          {errors.password ? (
-            <p className="text-xs text-destructive">{errors.password.message}</p>
-          ) : null}
+          <Input id="password" name="password" type="password" autoComplete="new-password" />
+          {errors.password ? <p className="text-xs text-destructive">{errors.password}</p> : null}
         </div>
-        {serverError ? <p className="text-sm text-destructive">{serverError}</p> : null}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating account…' : 'Create account'}
+        <Button type="submit" className="w-full" loading={pending}>
+          Create account
         </Button>
       </form>
     </div>
