@@ -252,7 +252,7 @@ Rules:
 ## Drizzle workflow
 
 - **Schema has two sources of truth.** Better Auth's tables live in `src/db/schema/auth.ts`, which is **generated** from the auth config — never hand-edit it. Your own tables (e.g. `items.ts`) are hand-written; add `<resource>.ts` and re-export from `src/db/schema/index.ts`.
-- Run `bun run db:generate` to create a new migration SQL file in `drizzle/` from the Drizzle schema.
+- Run `bun run db:generate` to create a new migration SQL file in `drizzle/` from the Drizzle schema. Filenames are **timestamped** (`migrations.prefix: 'timestamp'` in `drizzle.config.ts`) so parallel branches don't collide on a sequential number; apply order is tracked in `drizzle/meta/_journal.json`.
 - Run `bun run db:migrate` to apply it. In dev you can use `bun run db:push` to sync schema without migrations.
 - **Auth tables are config-driven.** After changing `src/lib/auth/auth.ts` (adding a plugin, `additionalFields`) or upgrading `better-auth`, run `bun run auth:generate` to regenerate `src/db/schema/auth.ts`, then `bun run db:generate && bun run db:migrate` like any other schema change. (`@better-auth/cli migrate` only supports Kysely, so migrations always go through Drizzle — one tool, one folder.)
 - The shared pool is exposed as `pool` from `@/db` for code that needs raw SQL (Better Auth tables, rare advanced queries). Everything else uses the `db` Drizzle wrapper.
