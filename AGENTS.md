@@ -9,7 +9,7 @@ You are working in a **Next.js 16 SaaS starter** built around six non-negotiable
 1. **App Router + RSC by default.** Server Components for data, Client Components only at the leaves.
 2. **Multi-tenancy is enforced at the data layer.** Every row that belongs to a workspace MUST be filtered by `organizationId` in every query — no exceptions.
 3. **Typed routes are on.** `<Link href>` and `router.push()` only accept routes that exist. Cast user-supplied paths via `safeNextPath()`.
-4. **Loading is granular, never a bottleneck.** Wrap every async read in its own `<Suspense>` with a skeleton that mirrors the real shape. The static shell renders instantly and each section streams in independently — no single slow query blocks the page. No route-level `loading.tsx`.
+4. **Loading is granular, never a bottleneck.** Wrap every async read in its own `<Suspense>` with a skeleton that mirrors the real shape. The static shell renders instantly and each section streams in independently — no single slow query blocks the page. No route-level `loading.tsx`. **Whenever you change a section's layout/elements, update its skeleton to match.**
 5. **Server Actions for mutations, Server Components for reads.** Route handlers are reserved for things actions can't do (streaming, webhooks, third-party callbacks).
 6. **Style with shadcn + Tailwind, never a hand-rolled theme.** shadcn components, Tailwind utilities, and the existing theme tokens only. Don't hand-edit `globals.css`/token values or add ad-hoc colors — see **Design & UX patterns**.
 
@@ -30,6 +30,7 @@ Read this file end-to-end before writing code. The patterns below are load-beari
 | Validation  | Zod 4                                            |
 | Forms       | Native React 19 (Server Actions / `useTransition`) + Zod — no form library |
 | AI          | AI SDK 6 (open-source) + direct provider package — no gateway, no lock-in |
+| Email       | Resend (transactional) — optional; logs to console when unset |
 | Theme       | `next-themes` (system / light / dark)            |
 
 > The stack is deliberately **portable and lock-in free**: any Postgres via `DATABASE_URL`, any
@@ -227,6 +228,7 @@ Rules:
 - **One boundary per independent read.** Two sections that fetch separately (workspace name vs. member list) get separate `<Suspense>` boundaries so neither waits on the other. See `settings/organization/page.tsx`.
 - **Keep slow `await`s out of the page/layout body.** Anything awaited before the first `<Suspense>` blocks the whole subtree — push DB queries into the async child. Fast, request-cached reads (`requireActiveOrg()`, already resolved by the layout) are fine to await in the shell.
 - **Skeletons mirror the real shape with primitives only.** Use the shadcn `Skeleton` (rectangles; add `rounded-full` for avatars/pills). Match the real wrapper classes and element counts so nothing shifts when data lands — co-locate the skeleton in the same file as the real markup so they stay in sync.
+- **Keep skeletons in sync when the UI changes (load-bearing rule).** Any time you change a streamed section's markup or elements — add/remove a table column, change a control, restructure a card — update its co-located skeleton in the same change. A skeleton that no longer mirrors the real shape causes layout shift and is a bug.
 - **No `loading.tsx`.** A route-level `loading.tsx` is a single Suspense boundary around the entire page — exactly the bottleneck we're avoiding. Want a navigation indicator? Add a top progress bar in the layout, not a full-page skeleton.
 - **No async data → no skeleton.** Static pages (dashboard home) and already-resolved reads don't need a boundary.
 
@@ -395,7 +397,7 @@ Open `src/app/api/chat/route.ts`. To change model: edit the `MODEL` constant (e.
 
 ### Send real emails (org invites, password reset)
 
-Better Auth has hooks (`sendResetPassword`, `sendInvitationEmail`). Wire them up in `src/lib/auth/auth.ts` to your provider of choice (Resend, Postmark, AWS SES…). The starter intentionally leaves this unconfigured.
+Wired through **Resend**: `sendResetPassword` and `sendInvitationEmail` in `src/lib/auth/auth.ts` call the `sendEmail()` helper in `src/lib/email.ts`. Set `RESEND_API_KEY` (and `EMAIL_FROM` — a verified domain in prod) to deliver for real; with no key, emails are logged to the server console so dev flows still work end-to-end. Swap providers by editing `src/lib/email.ts` only. Invites link to `/accept-invitation/[id]` (a top-level authed page, kept out of `(dashboard)` so the org auto-setup redirect can't intercept it).
 
 ---
 
@@ -418,6 +420,7 @@ Check the current docs before using an API from memory — these move fast. (Off
 | next-themes                         | https://github.com/pacocoursey/next-themes      |
 | lucide icons                        | https://lucide.dev/icons                        |
 | sonner (toasts)                     | https://sonner.emilkowal.ski                    |
+| Resend (email)                      | https://resend.com/docs                         |
 | node-postgres (`pg`)                | https://node-postgres.com                       |
 
 ---

@@ -7,6 +7,7 @@ A production-grade Next.js 16 starter for multi-tenant SaaS apps. Opinionated, l
 - **Better Auth** with email/password, Google OAuth, and the organization plugin (multi-tenant out of the box)
 - **Drizzle ORM** + **Postgres** — works with any provider via `DATABASE_URL`
 - **AI SDK 6** streaming chat — direct provider package, no gateway or vendor lock-in
+- **Resend** transactional email — password reset + org invites (optional; logs to console in dev)
 - Inset sidebar shell, three example pages, granular streaming with React `<Suspense>`
 - Account & organization settings, member invites, workspace switcher
 - `AGENTS.md` tuned for AI-assisted development — synced to Claude Code, Cursor, and Copilot
@@ -47,6 +48,8 @@ Open `http://localhost:3000` and sign in with **`dev@acme.test`** / **`password`
 | `BETTER_AUTH_URL`                              | prod              | Public origin (auto-inferred in dev)                    |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`    | optional          | Enables Google sign-in button                           |
 | `ANTHROPIC_API_KEY`                            | optional          | Enables the /chat example (swap provider in route.ts)   |
+| `RESEND_API_KEY`                               | optional          | Password-reset + invite emails (logs in dev if unset)   |
+| `EMAIL_FROM`                                   | optional          | From address; use a Resend-verified domain in prod      |
 
 OAuth redirect URI for Google: `https://YOUR_HOST/api/auth/callback/google`.
 
@@ -102,7 +105,6 @@ bun run auth:generate # regenerate src/db/schema/auth.ts from auth config (after
 
 The starter intentionally stops short of:
 
-- Email delivery (pick your provider)
 - Billing (Stripe / LemonSqueezy / Polar — pick yours)
 - Analytics (Vercel Web Analytics is one line in the layout when you want it)
 
@@ -116,7 +118,7 @@ These are opinionated, app-specific choices; the starter stays unopinionated so 
 2. Import it on Vercel (`https://vercel.com/new`) — accept the defaults; Bun and Next.js 16 are detected automatically.
 3. Provision a Postgres database (Vercel Marketplace → Neon, Supabase, etc.). Vercel injects `DATABASE_URL` automatically.
 4. Add `BETTER_AUTH_SECRET` (generate with `openssl rand -base64 32`) and `BETTER_AUTH_URL` (your production origin) under Settings → Environment Variables.
-5. Optional: add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and `ANTHROPIC_API_KEY` (or your chosen AI provider's key).
+5. Optional: add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `ANTHROPIC_API_KEY` (or your AI provider's key), and `RESEND_API_KEY` / `EMAIL_FROM` for email.
 6. Run `bun run db:push` once against the production DB (locally, with `DATABASE_URL` pointed at production) — or wire `db:migrate` into your CI.
 
 The `/chat` example talks to your AI provider directly (Anthropic by default) — no gateway required. Swap providers by installing another `@ai-sdk/*` package and updating `src/app/api/chat/route.ts`.

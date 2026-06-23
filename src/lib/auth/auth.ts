@@ -4,6 +4,7 @@ import { nextCookies } from 'better-auth/next-js'
 import { organization } from 'better-auth/plugins'
 import { db } from '@/db'
 import * as authSchema from '@/db/schema/auth'
+import { sendEmail } from '@/lib/email'
 
 if (!process.env.BETTER_AUTH_SECRET) {
   throw new Error('Missing BETTER_AUTH_SECRET. Generate one with: openssl rand -base64 32')
@@ -19,6 +20,9 @@ if (!process.env.BETTER_AUTH_SECRET) {
 const baseURL =
   process.env.BETTER_AUTH_URL ??
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+
+// Absolute origin for links inside emails (org invites). Dev falls back to localhost.
+const appUrl = baseURL ?? 'http://localhost:3000'
 
 const hasGoogle = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 
@@ -37,6 +41,14 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     requireEmailVerification: false,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: 'Reset your password',
+        text: `Reset your password: ${url}`,
+        html: `<p>Click the link below to reset your password:</p><p><a href="${url}">Reset password</a></p><p>If you didn't request this, you can safely ignore this email.</p>`,
+      })
+    },
   },
 
   socialProviders: hasGoogle
@@ -64,6 +76,16 @@ export const auth = betterAuth({
       // The first user to sign up creates their personal org via the
       // post-sign-up server action; admins can also create more.
       allowUserToCreateOrganization: true,
+      sendInvitationEmail: async ({ id, email, organization, inviter }) => {
+        const acceptUrl = `${appUrl}/accept-invitation/${id}`
+        const who = inviter.user.name || inviter.user.email
+        await sendEmail({
+          to: email,
+          subject: `You've been invited to ${organization.name}`,
+          text: `${who} invited you to join ${organization.name}. Accept: ${acceptUrl}`,
+          html: `<p><strong>${who}</strong> invited you to join <strong>${organization.name}</strong>.</p><p><a href="${acceptUrl}">Accept invitation</a></p>`,
+        })
+      },
     }),
     // Must be last — wires Better Auth's cookies into Next.js server actions.
     nextCookies(),

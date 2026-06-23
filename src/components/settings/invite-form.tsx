@@ -69,7 +69,7 @@ export function InviteForm() {
       </div>
       {errors.email ? <p className="text-xs text-destructive">{errors.email}</p> : null}
       <p className="text-xs text-muted-foreground">
-        Invitations are stored in the database. Wire up an email provider in <code>src/lib/auth/auth.ts</code> to actually deliver them.
+        Invitations are emailed via Resend when <code>RESEND_API_KEY</code> is set; otherwise the invite link is logged to the server console in dev.
       </p>
     </form>
   )
