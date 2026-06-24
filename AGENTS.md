@@ -294,6 +294,7 @@ House rules for how the UI looks and behaves. These are **conventions to follow 
 - **Style with the existing theme tokens; don't add ad-hoc colors.** The neutral palette in `src/app/globals.css` is deliberately tuned so depth reads by color (`--sidebar` < `--background` < `--card`; see **Elevation**). If it must change, adjust the whole scale coherently across light **and** dark (or regenerate via shadcn theming) — never tweak one token in isolation.
 - **No shadows.** Depth is expressed with the elevation tokens (color), never `shadow-*` utilities.
 - Reach for a shadcn component before writing custom markup; add missing ones via the CLI (or the shadcn MCP).
+- **Context-switching flows are full-page (no shell).** Creating or joining a workspace (`/organizations/new`, `/accept-invitation/[id]`) lives at a top-level route **outside `(dashboard)`** — no sidebar/topbar — so it reads as leaving the current org. Don't nest these under the dashboard layout.
 
 ### Elevation: depth reads darker
 
@@ -337,7 +338,7 @@ For icon-only buttons, render the spinner in place of the icon:
 
 ### Toasts: every outcome, bottom-right
 
-**Every** action outcome — success, error, and notable background completions — surfaces as a **toast**. No silent successes, no errors shown only inline. `<Toaster position="bottom-right" richColors closeButton />` is wired in `app/layout.tsx`; import `toast` from `sonner`.
+**Every** action outcome — success, error, and notable background completions — surfaces as a **toast**. No silent successes, no errors shown only inline. `<Toaster position="bottom-right" closeButton />` is wired in `app/layout.tsx` — toasts are **neutral** (the per-type icon conveys tone; no colored backgrounds). Import `toast` from `sonner`.
 
 - **Mutating server actions** mutate + `revalidatePath` and **return** the data the client needs — they do **not** `redirect()`. The client `try/catch`es the call, toasts `success`/`error`, then navigates (`router.push` / `router.refresh`). Redirecting from the action throws `NEXT_REDIRECT`, which the client `catch` would swallow as a fake error and skip the toast.
 - **Client `authClient` calls** toast `error` on the returned `{ error }`, `success` on resolve.
